@@ -2,7 +2,6 @@ import subprocess
 import os
 import sys
 
-
 class GitObject:
     remote = {}
     branch = 'master'
@@ -10,6 +9,17 @@ class GitObject:
     unstaged_files = {}
     untracked_files = {}
     conflicted_files = {}
+    total_files = 0
+
+    @staticmethod
+    def empty():
+        GitObject.remote = {}
+        GitObject.branch = 'master'
+        GitObject.staged_files = {}
+        GitObject.unstaged_files = {}
+        GitObject.untracked_files = {}
+        GitObject.conflicted_files = {}
+        GitObject.total_files = 0
 
 
 class bcolors:
@@ -31,27 +41,43 @@ def print_file(file_type,color_code):
 
 
 def status():
+    populate_gitobject()
     try:
 
-        if GitObject.staged_files:
-            print '{0}[+] Staged Files i.e Files Going on Next Commit {1} \n\n'.format(bcolors.OKGREEN, bcolors.ENDC)
-            print_file(GitObject.staged_files, bcolors.OKGREEN)
-        if GitObject.unstaged_files:
-            print '\n\n{0}[-] Unstaged Files i.e Files Changed but not going on Next Commit {1} \n\n'.format(bcolors.WARNING, bcolors.ENDC)
-            print_file(GitObject.unstaged_files, bcolors.WARNING)
-        if GitObject.untracked_files:
-            print '\n\n{0}[?] Files Not Being Tracked by GIT {1} \n\n'.format(bcolors.FAIL, bcolors.ENDC)
-            print_file(GitObject.untracked_files, bcolors.FAIL)
-        if GitObject.conflicted_files:
-            print '\n\n{0}[$] Conficted Files Fix Before pushing or pulling code{1} \n\n'.format(bcolors.HEADER,bcolors.ENDC)
-            print_file(GitObject.conflicted_files, bcolors.HEADER)
+        show_staged_files()
+        show_unstaged_files()
+        show_untracked_files()
+        show_confliced_files()
 
-        menu()
-
-
+        print '\n\n'
     except subprocess.CalledProcessError:
         print '{0}[-] Some Error Occured Please Retry! {1}'.format(bcolors.FAIL, bcolors.ENDC)
-        menu()
+
+
+def show_confliced_files():
+    if GitObject.conflicted_files:
+        print '\n\n{0}[$] Conflicted Files Fix Before pushing or pulling code{1} \n\n'.format(bcolors.HEADER,
+                                                                                              bcolors.ENDC)
+        print_file(GitObject.conflicted_files, bcolors.HEADER)
+
+
+def show_untracked_files():
+    if GitObject.untracked_files:
+        print '\n\n{0}[?] Files Not Being Tracked by GIT {1} \n\n'.format(bcolors.BOLD, bcolors.ENDC)
+        print_file(GitObject.untracked_files, bcolors.BOLD)
+
+
+def show_unstaged_files():
+    if GitObject.unstaged_files:
+        print '\n\n{0}[-] Unstaged Files i.e Files Changed but not going on Next Commit {1} \n\n'.format(bcolors.FAIL,
+                                                                                                         bcolors.ENDC)
+        print_file(GitObject.unstaged_files, bcolors.FAIL)
+
+
+def show_staged_files():
+    if GitObject.staged_files:
+        print '\n\n{0}[+] Staged Files i.e Files Going on Next Commit {1} \n\n'.format(bcolors.WARNING, bcolors.ENDC)
+        print_file(GitObject.staged_files, bcolors.WARNING)
 
 
 def pull_code():
@@ -63,7 +89,7 @@ def pull_code():
     print '{0}[?] Select Remote:'.format(bcolors.OKBLUE)
     for remote in GitObject.remote.keys():
         print remote + ' ---> ' + GitObject.remote[remote]
-    remote = raw_input('Press Q to cancel Push \nChoice : ')
+    remote = raw_input('[*]Press Q to cancel Push \nChoice : ')
     try:
         if remote == 'q' or remote == 'Q':
             raise RuntimeError
@@ -79,7 +105,6 @@ def pull_code():
 
     except RuntimeError:
         print '{0}[*] Pushing Cancelled by User {1}'.format(bcolors.FAIL, bcolors.ENDC)
-        menu()
 
 def push_code():
     print '{0} Current Branch is: {1}{2} {3}'.format(bcolors.OKBLUE, bcolors.OKGREEN, GitObject.branch, bcolors.OKBLUE)
@@ -90,7 +115,7 @@ def push_code():
     print '{0}[?] Select Remote:'.format(bcolors.OKBLUE)
     for remote in GitObject.remote.keys():
         print remote + ' ---> ' + GitObject.remote[remote]
-    remote = raw_input('Press Q to cancel Push \nChoice : ')
+    remote = raw_input('[*]Press Q to cancel Push \nChoice : ')
     try:
         if remote == 'q' or remote == 'Q':
             raise RuntimeError
@@ -106,7 +131,6 @@ def push_code():
 
     except RuntimeError:
         print '{0}[*] Pushing Cancelled by User {1}'.format(bcolors.FAIL, bcolors.ENDC)
-        menu()
 
 
 
@@ -179,6 +203,7 @@ def populate_merge_conflicts(file_index):
 
 
 def populate_gitobject():
+    GitObject.empty()
     try:
         branches = subprocess.Popen(['git', 'branch'], stdout=subprocess.PIPE).communicate()[0].split('\n')
         for branch in branches:
@@ -200,12 +225,85 @@ def populate_gitobject():
         file_index = populate_unstaged_files(file_index , status_porcelain)
         file_index = populate_untracked_files(file_index, status_porcelain)
         file_index = populate_merge_conflicts(file_index)
-
-
+        GitObject.total_files = file_index
 
 
     except subprocess.CalledProcessError:
         print '{0}[-] Some Error Occured Please Retry! {1}'.format(bcolors.FAIL, bcolors.ENDC)
+
+
+def add_files_to_stage():
+    status()
+    try:
+        print '{0}[*] Press Q to Back Menu {1}'.format(bcolors.WARNING , bcolors.ENDC)
+        file_id = input('{0}[?] Enter the ID of the file to Stage: {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
+        assert file_id
+        file_key= ''
+        if GitObject.staged_files.has_key(file_id):
+            file_key = GitObject.staged_files[file_id]
+        elif GitObject.unstaged_files.has_key(file_id):
+            file_key = GitObject.unstaged_files[file_id]
+        elif GitObject.untracked_files.has_key(file_id):
+            file_key = GitObject.untracked_files[file_id]
+
+        elif GitObject.conflicted_files.has_key(file_id):
+            raise RuntimeError
+        else:
+            raise AssertionError
+
+        file_name = file_key.split(':')[1].strip()
+        print '{0}[+] Adding File : {1} to stage {2}'.format(bcolors.HEADER,file_name, bcolors.ENDC)
+        subprocess.check_call(['git', 'add', file_name])
+
+    except AssertionError:
+        print '{0}[-] Invalid File ID Detected {1}'.format(bcolors.FAIL, bcolors.ENDC)
+
+    except RuntimeError:
+        print '{0}[-] File is Conflicted Fix merges before adding it to Stage{1}'.format(bcolors.FAIL, bcolors.ENDC)
+
+    except subprocess.CalledProcessError:
+        print  '{0}[-] Fatal Error ! Please Retry'.format(bcolors.FAIL, bcolors.ENDC)
+
+    except NameError:
+        print '{0}[-] Back To Main Menu'.format(bcolors.FAIL, bcolors.ENDC)
+
+
+def remove_files_from_stage():
+    status()
+    try:
+        print '{0}[*] Press Q to Back Menu {1}'.format(bcolors.WARNING , bcolors.ENDC)
+        file_id = input('{0}[?] Enter ID to unstage files, changes will not be committed then :{1}'.format(bcolors.OKBLUE, bcolors.ENDC))
+        assert file_id
+        file_key = ''
+        if GitObject.staged_files.has_key(file_id):
+            file_key = GitObject.staged_files[file_id]
+        else:
+            raise AssertionError
+
+        file_name = file_key.split(':')[1].strip()
+        print '{0}[+] Removing File : {1} from stage {2}'.format(bcolors.HEADER, file_name, bcolors.ENDC)
+        subprocess.check_call(['git', 'reset', file_name])
+
+    except AssertionError:
+        print '{0}[-] Invalid File ID Detected {1}'.format(bcolors.FAIL, bcolors.ENDC)
+
+
+def commit_code():
+    try:
+        print '{0}[*] Enter Q to abort commit{1}'.format(bcolors.WARNING, bcolors.ENDC)
+        commit_message = raw_input('{0}[=] Commit Message : {1}'.format(bcolors.OKBLUE,bcolors.ENDC))
+        assert commit_message
+        if commit_message is 'Q' or commit_message is 'q':
+            raise RuntimeError
+
+        subprocess.check_call(['git','commit' ,'-m', commit_message])
+
+    except AssertionError:
+        print '{0}[-] Commit Message Cannot be empty {1}'.format(bcolors.FAIL, bcolors.ENDC)
+
+    except RuntimeError:
+        print '{0}[-] Going back to menu {1}'.format(bcolors.FAIL, bcolors.ENDC)
+
 
 
 def menu_when_a_git_repo(current_dir):
@@ -222,15 +320,24 @@ def menu_when_a_git_repo(current_dir):
 
     [5] Remote Operations
     [6] Configure Git
-[*] Exit Application
+[9] Exit Application
             ''' + bcolors.ENDC
     choice = input('{0}[?] Choice : {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
     try:
         if choice == 1:
             pull_code()
 
-        if choice == 2:
+        elif choice == 2:
             status()
+
+        elif choice == 3:
+            add_files_to_stage()
+
+        elif choice == 4:
+            remove_files_from_stage()
+
+        elif choice == 5:
+            commit_code()
 
         elif choice == 6:
             push_code()
@@ -239,8 +346,7 @@ def menu_when_a_git_repo(current_dir):
             #Other Options
             configure_git()
 
-
-        else:
+        elif choice ==9:
             raise RuntimeError
 
     except RuntimeError:
@@ -285,10 +391,8 @@ def configure_git():
             print '{0}[*] Success {1}'.format(bcolors.OKBLUE, bcolors.ENDC)
 
         else:
-            raise RuntimeError
+            pass
 
-    except RuntimeError:
-        menu()
     except AssertionError:
         print '{0}[-] Value Cannot Be Empty {1}'.format(bcolors.FAIL, bcolors.ENDC)
     except subprocess.CalledProcessError:
@@ -350,7 +454,8 @@ def setup_ssh():
         else:
             print '[+] Generating SSH Key'
             email = raw_input('Enter your email for rsa generation')
-            subprocess.check_call(['ssh-keygen', '-t', 'rsa', '-C', '"' + email + '"', '-b 4096'])
+            email = '"' + email + '"'
+            subprocess.check_call(['ssh-keygen', '-t', 'rsa', '-C', email, '-b', '4096'])
 
         subprocess.check_call("cat " + sshfile + " | pbcopy", shell=True)
         print '{0}[+] SSH Key Copied {1}'.format(bcolors.OKGREEN, bcolors.ENDC)
@@ -395,4 +500,5 @@ def check_git_directory():
 if __name__ == '__main__':
     message()
     check_git_directory()
-    menu()
+    while True:
+        menu()
