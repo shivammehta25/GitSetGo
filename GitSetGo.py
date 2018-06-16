@@ -82,7 +82,7 @@ def show_staged_files():
 def pull_code():
     print '{0} Current Branch is: {1}{2} {3}'.format(bcolors.OKBLUE, bcolors.OKGREEN, GitObject.branch, bcolors.OKBLUE)
     branch_change = raw_input('Do you wish to change branch ? (y/n) {0}'.format(bcolors.ENDC))
-    if branch_change is 'y' or 'Y':
+    if branch_change is 'y' or branch_change is 'Y':
         change_branch_from_branches()
 
     print '{0}[?] Select Remote from available list of Remotes::'.format(bcolors.OKBLUE)
@@ -113,7 +113,7 @@ def pull_code():
 def push_code():
     print '{0} Current Branch is: {1}{2} {3}'.format(bcolors.OKBLUE, bcolors.OKGREEN, GitObject.branch, bcolors.OKBLUE)
     branch_change = raw_input('Do you wish to change branch ? (y/n) {0}'.format(bcolors.ENDC))
-    if branch_change is 'y' or 'Y':
+    if branch_change is 'y' or branch_change is 'Y':
         change_branch_from_branches()
 
     print '{0}[?] Select Remote:'.format(bcolors.OKBLUE)
@@ -339,7 +339,6 @@ def manage_branches():
         if choice == 1:
             change_branch_from_branches()
 
-
     except AssertionError:
         print '{0}[-] Invalid Branch ID {1}'.format(bcolors.FAIL, bcolors.ENDC)
     except:
@@ -347,13 +346,17 @@ def manage_branches():
 
 
 def change_branch_from_branches():
-    branches = list_branches()
-    choice = input('{0}Enter The Branch ID to switch: {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
-    if not branches.has_key(choice):
-        raise AssertionError
-    branch_name = branches[choice]
-    subprocess.check_call(['git', 'checkout', branch_name])
-    print '{0}[+] Branch switched to {1} Successfully {2}'.format(bcolors.OKGREEN, branch_name, bcolors.ENDC)
+    try:
+        branches = list_branches()
+        choice = input('{0}Enter The Branch ID to switch: {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
+        if not branches.has_key(choice):
+            raise AssertionError
+        branch_name = branches[choice]
+        subprocess.check_call(['git', 'checkout', branch_name])
+        print '{0}[+] Branch switched to {1} Successfully {2}'.format(bcolors.OKGREEN, branch_name, bcolors.ENDC)
+    except AssertionError:
+        print '{0}[-] Invalid Branch ID {1}'.format(bcolors.FAIL, bcolors.ENDC)
+
 
 
 def list_branches():
