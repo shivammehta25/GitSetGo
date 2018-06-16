@@ -83,8 +83,8 @@ def pull_code():
     print '{0} Current Branch is: {1}{2} {3}'.format(bcolors.OKBLUE, bcolors.OKGREEN, GitObject.branch, bcolors.OKBLUE)
     branch_change = raw_input('Do you wish to change branch ? (y/n) {0}'.format(bcolors.ENDC))
     if branch_change is 'y' or 'Y':
-        # Change Branch Code
-        pass
+        change_branch_from_branches()
+
     print '{0}[?] Select Remote from available list of Remotes::'.format(bcolors.OKBLUE)
     for remote in GitObject.remote.keys():
         print 'Remote Name: ' + bcolors.HEADER + remote + bcolors.OKBLUE + ' points to url : ' + GitObject.remote[
@@ -114,8 +114,8 @@ def push_code():
     print '{0} Current Branch is: {1}{2} {3}'.format(bcolors.OKBLUE, bcolors.OKGREEN, GitObject.branch, bcolors.OKBLUE)
     branch_change = raw_input('Do you wish to change branch ? (y/n) {0}'.format(bcolors.ENDC))
     if branch_change is 'y' or 'Y':
-        # Change Branch Code
-        pass
+        change_branch_from_branches()
+
     print '{0}[?] Select Remote:'.format(bcolors.OKBLUE)
     for remote in GitObject.remote.keys():
         print remote + ' ---> ' + GitObject.remote[remote]
@@ -316,7 +316,6 @@ def commit_code():
 
         print '{0}[+] Commit Successful {1}'.format(bcolors.OKGREEN, bcolors.ENDC)
 
-
     except AssertionError:
         print '{0}[-] Commit Message Cannot be empty {1}'.format(bcolors.FAIL, bcolors.ENDC)
 
@@ -339,6 +338,7 @@ def manage_branches():
 
         if choice == 1:
             change_branch_from_branches()
+
 
     except AssertionError:
         print '{0}[-] Invalid Branch ID {1}'.format(bcolors.FAIL, bcolors.ENDC)
