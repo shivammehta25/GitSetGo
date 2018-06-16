@@ -116,10 +116,10 @@ def push_code():
     if branch_change is 'y' or branch_change is 'Y':
         change_branch_from_branches()
 
-    print '{0}[?] Select Remote:'.format(bcolors.OKBLUE)
+    print '{0}[?] Select Remote From List of Remotes:'.format(bcolors.OKBLUE)
     for remote in GitObject.remote.keys():
         print remote + ' ---> ' + GitObject.remote[remote]
-    remote = raw_input('[*]Press Q to cancel Push \nChoice : ')
+    remote = raw_input('[*]Press Q to cancel Push \nChoice (origin, upstream) : ')
     try:
         if remote == 'q' or remote == 'Q':
             raise RuntimeError
