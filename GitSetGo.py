@@ -2,6 +2,7 @@ import subprocess
 import os
 import sys
 
+
 class GitObject:
     remote = {}
     branch = 'master'
@@ -33,11 +34,9 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
-
-def print_file(file_type,color_code):
+def print_file(file_type, color_code):
     for key in file_type:
-        print '{0} {1:<5d} |  {2} {3}'.format(color_code,key, file_type[key] , bcolors.ENDC)
-
+        print '{0} {1:<5d} |  {2} {3}'.format(color_code, key, file_type[key], bcolors.ENDC)
 
 
 def status():
@@ -82,22 +81,26 @@ def show_staged_files():
 
 def pull_code():
     print '{0} Current Branch is: {1}{2} {3}'.format(bcolors.OKBLUE, bcolors.OKGREEN, GitObject.branch, bcolors.OKBLUE)
-    branch_change = raw_input('    Do you wish to change branch ? (y/n) {0}'.format(bcolors.ENDC))
+    branch_change = raw_input('Do you wish to change branch ? (y/n) {0}'.format(bcolors.ENDC))
     if branch_change is 'y' or 'Y':
         # Change Branch Code
         pass
-    print '{0}[?] Select Remote:'.format(bcolors.OKBLUE)
+    print '{0}[?] Select Remote from available list of Remotes::'.format(bcolors.OKBLUE)
     for remote in GitObject.remote.keys():
-        print remote + ' ---> ' + GitObject.remote[remote]
-    remote = raw_input('[*]Press Q to cancel Push \nChoice : ')
+        print 'Remote Name: ' + bcolors.HEADER + remote + bcolors.OKBLUE + ' points to url : ' + GitObject.remote[
+            remote]
+    remote = raw_input('[*]Press Q to cancel pull \nChoice of Remote (origin , upstream) : ')
     try:
         if remote == 'q' or remote == 'Q':
             raise RuntimeError
         if not GitObject.remote.has_key(remote):
             raise AssertionError
 
-        print '{0}{1} Pulling Branch {2} from {3}{4}'.format(bcolors.ENDC, bcolors.OKGREEN, GitObject.branch,remote,bcolors.ENDC )
-        subprocess.check_call(['git','pull', remote, GitObject.branch])
+        print '{0}{1} Pulling Branch {2} from {3}{4}'.format(bcolors.ENDC, bcolors.OKGREEN, GitObject.branch, remote,
+                                                             bcolors.ENDC)
+        subprocess.check_call(['git', 'pull', remote, GitObject.branch])
+        print '{0}[+] Pull Successful {1}'.format(bcolors.OKGREEN, bcolors.ENDC)
+
 
     except AssertionError:
         print '{0}[-] Please Select a valid remote {1}'.format(bcolors.FAIL, bcolors.ENDC)
@@ -106,9 +109,10 @@ def pull_code():
     except RuntimeError:
         print '{0}[*] Pushing Cancelled by User {1}'.format(bcolors.FAIL, bcolors.ENDC)
 
+
 def push_code():
     print '{0} Current Branch is: {1}{2} {3}'.format(bcolors.OKBLUE, bcolors.OKGREEN, GitObject.branch, bcolors.OKBLUE)
-    branch_change = raw_input('    Do you wish to change branch ? (y/n) {0}'.format(bcolors.ENDC))
+    branch_change = raw_input('Do you wish to change branch ? (y/n) {0}'.format(bcolors.ENDC))
     if branch_change is 'y' or 'Y':
         # Change Branch Code
         pass
@@ -122,8 +126,10 @@ def push_code():
         if not GitObject.remote.has_key(remote):
             raise AssertionError
 
-        print '{0}{1} Pushing Branch {2} to {3}{4}'.format(bcolors.ENDC, bcolors.OKGREEN, GitObject.branch,remote,bcolors.ENDC )
-        subprocess.check_call(['git','push', remote, GitObject.branch])
+        print '{0}{1} Pushing Branch {2} to {3}{4}'.format(bcolors.ENDC, bcolors.OKGREEN, GitObject.branch, remote,
+                                                           bcolors.ENDC)
+        subprocess.check_call(['git', 'push', remote, GitObject.branch])
+        print '{0}[+] Push Successful {1}'.format(bcolors.OKGREEN, bcolors.ENDC)
 
     except AssertionError:
         print '{0}[-] Please Select a valid remote {1}'.format(bcolors.FAIL, bcolors.ENDC)
@@ -133,8 +139,7 @@ def push_code():
         print '{0}[*] Pushing Cancelled by User {1}'.format(bcolors.FAIL, bcolors.ENDC)
 
 
-
-def populate_staged_files(file_index,status):
+def populate_staged_files(file_index, status):
     for file in status:
         if file:
             if not file[0] == ' ' and not file[0] == '?':
@@ -194,35 +199,24 @@ def populate_untracked_files(file_index, status):
 
 
 def populate_merge_conflicts(file_index):
-    conflicted_files = subprocess.Popen(['git', 'diff', '--name-only', '--diff-filter=U'], stdout=subprocess.PIPE).communicate()[0]
+    conflicted_files = \
+    subprocess.Popen(['git', 'diff', '--name-only', '--diff-filter=U'], stdout=subprocess.PIPE).communicate()[0]
     for file in conflicted_files:
-        file_index +=1
+        file_index += 1
         GitObject.conflicted_files[file_index] = file
     return file_index
-
 
 
 def populate_gitobject():
     GitObject.empty()
     try:
-        branches = subprocess.Popen(['git', 'branch'], stdout=subprocess.PIPE).communicate()[0].split('\n')
-        for branch in branches:
-            if branch.startswith('*'):
-                GitObject.branch = branch.replace('*','').strip()
-
-        remotes = subprocess.Popen(['git', 'remote', '-v'], stdout=subprocess.PIPE).communicate()[0]
-        for remote in remotes.split('\n'):
-            if remote:
-                stream_name = remote.split()[0]
-                stream_url = remote.split()[1]
-                if not GitObject.remote.has_key(stream_name):
-                    GitObject.remote[stream_name] = stream_url
-
+        GitObject.branch = populate_current_branch()
+        populate_remotes()
         status_porcelain = subprocess.Popen(['git', 'status', '--porcelain'], stdout=subprocess.PIPE).communicate()[0]
-        status_porcelain =  status_porcelain.split('\n')
+        status_porcelain = status_porcelain.split('\n')
         file_index = 0
-        file_index = populate_staged_files(file_index,status_porcelain)
-        file_index = populate_unstaged_files(file_index , status_porcelain)
+        file_index = populate_staged_files(file_index, status_porcelain)
+        file_index = populate_unstaged_files(file_index, status_porcelain)
         file_index = populate_untracked_files(file_index, status_porcelain)
         file_index = populate_merge_conflicts(file_index)
         GitObject.total_files = file_index
@@ -232,13 +226,32 @@ def populate_gitobject():
         print '{0}[-] Some Error Occured Please Retry! {1}'.format(bcolors.FAIL, bcolors.ENDC)
 
 
+def populate_remotes():
+    remotes = subprocess.Popen(['git', 'remote', '-v'], stdout=subprocess.PIPE).communicate()[0]
+    for remote in remotes.split('\n'):
+        if remote:
+            stream_name = remote.split()[0]
+            stream_url = remote.split()[1]
+            if not GitObject.remote.has_key(stream_name):
+                GitObject.remote[stream_name] = stream_url
+
+
+def populate_current_branch():
+    current_branch = ''
+    branches = subprocess.Popen(['git', 'branch'], stdout=subprocess.PIPE).communicate()[0].split('\n')
+    for branch in branches:
+        if branch.startswith('*'):
+            current_branch = branch.replace('*', '').strip()
+    return current_branch
+
+
 def add_files_to_stage():
     status()
     try:
-        print '{0}[*] Press Q to Back Menu {1}'.format(bcolors.WARNING , bcolors.ENDC)
+        print '{0}[*] Press Q to Back Menu {1}'.format(bcolors.WARNING, bcolors.ENDC)
         file_id = input('{0}[?] Enter the ID of the file to Stage: {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
         assert file_id
-        file_key= ''
+        file_key = ''
         if GitObject.staged_files.has_key(file_id):
             file_key = GitObject.staged_files[file_id]
         elif GitObject.unstaged_files.has_key(file_id):
@@ -252,7 +265,7 @@ def add_files_to_stage():
             raise AssertionError
 
         file_name = file_key.split(':')[1].strip()
-        print '{0}[+] Adding File : {1} to stage {2}'.format(bcolors.HEADER,file_name, bcolors.ENDC)
+        print '{0}[+] Adding File : {1} to stage {2}'.format(bcolors.HEADER, file_name, bcolors.ENDC)
         subprocess.check_call(['git', 'add', file_name])
 
     except AssertionError:
@@ -271,8 +284,10 @@ def add_files_to_stage():
 def remove_files_from_stage():
     status()
     try:
-        print '{0}[*] Press Q to Back Menu {1}'.format(bcolors.WARNING , bcolors.ENDC)
-        file_id = input('{0}[?] Enter ID to unstage files, changes will not be committed then :{1}'.format(bcolors.OKBLUE, bcolors.ENDC))
+        print '{0}[*] Press Q to Back Menu {1}'.format(bcolors.WARNING, bcolors.ENDC)
+        file_id = input(
+            '{0}[?] Enter ID to unstage files, changes will not be committed then :{1}'.format(bcolors.OKBLUE,
+                                                                                               bcolors.ENDC))
         assert file_id
         file_key = ''
         if GitObject.staged_files.has_key(file_id):
@@ -290,13 +305,17 @@ def remove_files_from_stage():
 
 def commit_code():
     try:
+        show_staged_files()
         print '{0}[*] Enter Q to abort commit{1}'.format(bcolors.WARNING, bcolors.ENDC)
-        commit_message = raw_input('{0}[=] Commit Message : {1}'.format(bcolors.OKBLUE,bcolors.ENDC))
+        commit_message = raw_input('{0}[=] Commit Message : {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
         assert commit_message
         if commit_message is 'Q' or commit_message is 'q':
             raise RuntimeError
 
-        subprocess.check_call(['git','commit' ,'-m', commit_message])
+        subprocess.check_call(['git', 'commit', '-m', commit_message])
+
+        print '{0}[+] Commit Successful {1}'.format(bcolors.OKGREEN, bcolors.ENDC)
+
 
     except AssertionError:
         print '{0}[-] Commit Message Cannot be empty {1}'.format(bcolors.FAIL, bcolors.ENDC)
@@ -305,11 +324,61 @@ def commit_code():
         print '{0}[-] Going back to menu {1}'.format(bcolors.FAIL, bcolors.ENDC)
 
 
+def manage_branches():
+    print bcolors.OKBLUE + '''
+[*] Options:
+[1] Change Branch                           [4] Delete A Branch
+[2] Setup A branch To Track Remote Branch
+[3] Show All Branches
+[9] Back To Main Menu
+
+[0] Choice:
+    ''' + bcolors.ENDC
+    try:
+        choice = input('{0}[?] Choice : {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
+
+        if choice == 1:
+            change_branch_from_branches()
+
+    except AssertionError:
+        print '{0}[-] Invalid Branch ID {1}'.format(bcolors.FAIL, bcolors.ENDC)
+    except:
+        print '{0}[+] Fatal Error ! Please Retry {1}'.format(bcolors.FAIL, bcolors.ENDC)
+
+
+def change_branch_from_branches():
+    branches = list_branches()
+    choice = input('{0}Enter The Branch ID to switch: {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
+    if not branches.has_key(choice):
+        raise AssertionError
+    branch_name = branches[choice]
+    subprocess.check_call(['git', 'checkout', branch_name])
+    print '{0}[+] Branch switched to {1} Successfully {2}'.format(bcolors.OKGREEN, branch_name, bcolors.ENDC)
+
+
+def list_branches():
+    print '{0}[+] List of Available branches :{1}'.format(bcolors.HEADER, bcolors.ENDC)
+    list_of_branches = subprocess.Popen(['git', 'branch'], stdout=subprocess.PIPE).communicate()[0].split('\n')
+    branches = {}
+    initial_number = 0
+    for branch in list_of_branches:
+        if branch:
+            start_color = ''
+            if branch.startswith('*'):
+                start_color = bcolors.OKGREEN
+            else:
+                start_color = bcolors.FAIL
+
+            initial_number += 1
+            branches[initial_number] = branch.replace("*", "").strip()
+            print '{0}{1:<3d}: {2}{3}'.format(start_color, initial_number, branch, bcolors.ENDC)
+    return branches
+
 
 def menu_when_a_git_repo(current_dir):
     populate_gitobject()
 
-    print  bcolors.OKBLUE + '''
+    print bcolors.OKBLUE + '''
 [*] Options :
 
 [1] Pull Code                                                       [5] Commit with Message
@@ -322,8 +391,9 @@ def menu_when_a_git_repo(current_dir):
     [6] Configure Git
 [9] Exit Application
             ''' + bcolors.ENDC
-    choice = input('{0}[?] Choice : {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
     try:
+        choice = input('{0}[?] Choice : {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
+
         if choice == 1:
             pull_code()
 
@@ -342,11 +412,14 @@ def menu_when_a_git_repo(current_dir):
         elif choice == 6:
             push_code()
 
+        elif choice == 7:
+            manage_branches()
+
         elif choice == 8:
-            #Other Options
+            # Other Options
             configure_git()
 
-        elif choice ==9:
+        elif choice == 9:
             raise RuntimeError
 
     except RuntimeError:
@@ -412,10 +485,10 @@ def menu_when_not_a_git_repo(current_dir):
 [1] Clone a repository
 [2] Configure SSH
 [3] Initialize a Git Repository at this location
-[*] Exit Application
+[9] Exit Application
         ''' + bcolors.ENDC
-    choice = input('{0}[?] Choice : {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
     try:
+        choice = input('{0}[?] Choice : {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
         if choice == 1:
             clone_repository(current_dir)
 
@@ -425,10 +498,13 @@ def menu_when_not_a_git_repo(current_dir):
         elif choice == 3:
             initialize_git()
 
-        else:
+        elif choice == 9:
             raise RuntimeError
 
     except RuntimeError:
+        print '{0}[+] Exiting {1}'.format(bcolors.OKGREEN, bcolors.ENDC)
+        sys.exit(0)
+    except:
         print '{0}[+] Exiting {1}'.format(bcolors.OKGREEN, bcolors.ENDC)
         sys.exit(0)
 
