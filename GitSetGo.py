@@ -8,7 +8,7 @@ class GitObject:
     branch = 'master'
     staged_files = {}
     unstaged_files = {}
-    unmodified_files = {}
+    untracked_files = {}
     conflicted_files = {}
 
 
@@ -23,10 +23,30 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
+
+def print_file(file_type,color_code):
+    for key in file_type:
+        print '{0} {1:<5d} |  {2} {3}'.format(color_code,key, file_type[key] , bcolors.ENDC)
+
+
+
 def status():
     try:
-        for file in GitObject.unstaged_files.keys():
-            print str(file)  + ' ' + GitObject.unstaged_files[file]
+
+        if GitObject.staged_files:
+            print '{0}[+] Staged Files i.e Files Going on Next Commit {1} \n\n'.format(bcolors.OKGREEN, bcolors.ENDC)
+            print_file(GitObject.staged_files, bcolors.OKGREEN)
+        if GitObject.unstaged_files:
+            print '\n\n{0}[-] Unstaged Files i.e Files Changed but not going on Next Commit {1} \n\n'.format(bcolors.WARNING, bcolors.ENDC)
+            print_file(GitObject.unstaged_files, bcolors.WARNING)
+        if GitObject.untracked_files:
+            print '\n\n{0}[?] Files Not Being Tracked by GIT {1} \n\n'.format(bcolors.FAIL, bcolors.ENDC)
+            print_file(GitObject.untracked_files, bcolors.FAIL)
+        if GitObject.conflicted_files:
+            print '\n\n{0}[$] Conficted Files Fix Before pushing or pulling code{1} \n\n'.format(bcolors.HEADER,bcolors.ENDC)
+            print_file(GitObject.conflicted_files, bcolors.HEADER)
+
+        menu()
 
 
     except subprocess.CalledProcessError:
@@ -35,8 +55,59 @@ def status():
 
 
 def pull_code():
-    remote = raw_input('{0}[?] Select  {1}'.format(bcolors.FAIL, bcolors.ENDC))
-    print '{0}[*] Pulling From'
+    print '{0} Current Branch is: {1}{2} {3}'.format(bcolors.OKBLUE, bcolors.OKGREEN, GitObject.branch, bcolors.OKBLUE)
+    branch_change = raw_input('    Do you wish to change branch ? (y/n) {0}'.format(bcolors.ENDC))
+    if branch_change is 'y' or 'Y':
+        # Change Branch Code
+        pass
+    print '{0}[?] Select Remote:'.format(bcolors.OKBLUE)
+    for remote in GitObject.remote.keys():
+        print remote + ' ---> ' + GitObject.remote[remote]
+    remote = raw_input('Press Q to cancel Push \nChoice : ')
+    try:
+        if remote == 'q' or remote == 'Q':
+            raise RuntimeError
+        if not GitObject.remote.has_key(remote):
+            raise AssertionError
+
+        print '{0}{1} Pulling Branch {2} from {3}{4}'.format(bcolors.ENDC, bcolors.OKGREEN, GitObject.branch,remote,bcolors.ENDC )
+        subprocess.check_call(['git','pull', remote, GitObject.branch])
+
+    except AssertionError:
+        print '{0}[-] Please Select a valid remote {1}'.format(bcolors.FAIL, bcolors.ENDC)
+        pull_code()
+
+    except RuntimeError:
+        print '{0}[*] Pushing Cancelled by User {1}'.format(bcolors.FAIL, bcolors.ENDC)
+        menu()
+
+def push_code():
+    print '{0} Current Branch is: {1}{2} {3}'.format(bcolors.OKBLUE, bcolors.OKGREEN, GitObject.branch, bcolors.OKBLUE)
+    branch_change = raw_input('    Do you wish to change branch ? (y/n) {0}'.format(bcolors.ENDC))
+    if branch_change is 'y' or 'Y':
+        # Change Branch Code
+        pass
+    print '{0}[?] Select Remote:'.format(bcolors.OKBLUE)
+    for remote in GitObject.remote.keys():
+        print remote + ' ---> ' + GitObject.remote[remote]
+    remote = raw_input('Press Q to cancel Push \nChoice : ')
+    try:
+        if remote == 'q' or remote == 'Q':
+            raise RuntimeError
+        if not GitObject.remote.has_key(remote):
+            raise AssertionError
+
+        print '{0}{1} Pushing Branch {2} to {3}{4}'.format(bcolors.ENDC, bcolors.OKGREEN, GitObject.branch,remote,bcolors.ENDC )
+        subprocess.check_call(['git','push', remote, GitObject.branch])
+
+    except AssertionError:
+        print '{0}[-] Please Select a valid remote {1}'.format(bcolors.FAIL, bcolors.ENDC)
+        push_code()
+
+    except RuntimeError:
+        print '{0}[*] Pushing Cancelled by User {1}'.format(bcolors.FAIL, bcolors.ENDC)
+        menu()
+
 
 
 def populate_staged_files(file_index,status):
@@ -67,7 +138,7 @@ def populate_staged_files(file_index,status):
 def populate_unstaged_files(file_index, status):
     for file in status:
         if file:
-            if file[1] and not file[0] == ' ' and not file[0] == '?':
+            if file[1] and file[0] == ' ' and not file[0] == '?':
                 if 'M' == file[1]:
                     file_index += 1
                     GitObject.unstaged_files[file_index] = 'Modifed : ' + file[3:]
@@ -94,7 +165,7 @@ def populate_untracked_files(file_index, status):
         if file:
             if file[0] == '?':
                 file_index += 1
-                GitObject.conflicted_files[file_index] = 'Untracked File : ' + file[3:]
+                GitObject.untracked_files[file_index] = 'Untracked File : ' + file[3:]
     return file_index
 
 
@@ -102,17 +173,17 @@ def populate_merge_conflicts(file_index):
     conflicted_files = subprocess.Popen(['git', 'diff', '--name-only', '--diff-filter=U'], stdout=subprocess.PIPE).communicate()[0]
     for file in conflicted_files:
         file_index +=1
-        conflicted_files[file_index] = file
+        GitObject.conflicted_files[file_index] = file
     return file_index
 
 
 
 def populate_gitobject():
     try:
-        branches = subprocess.Popen(['git', 'branch'], stdout=subprocess.PIPE).communicate()[0]
+        branches = subprocess.Popen(['git', 'branch'], stdout=subprocess.PIPE).communicate()[0].split('\n')
         for branch in branches:
             if branch.startswith('*'):
-                GitObject.branch = branch
+                GitObject.branch = branch.replace('*','').strip()
 
         remotes = subprocess.Popen(['git', 'remote', '-v'], stdout=subprocess.PIPE).communicate()[0]
         for remote in remotes.split('\n'):
@@ -141,14 +212,14 @@ def menu_when_a_git_repo(current_dir):
     populate_gitobject()
 
     print  bcolors.OKBLUE + '''
-[1] Pull Code
-[2] Status of Files
-[3] Add Files To Stage
-[4] Remove Files From Stage
-[5] Commit with Message
-[6] Push Code
-[7] Manage Branches
-[8] Other Miscellaneous Operations
+[*] Options :
+
+[1] Pull Code                                                       [5] Commit with Message
+[2] Status of Files                                                 [6] Push Code
+[3] Add Files To Stage                                              [7] Manage Branches
+[4] Remove Files From Stage                                         [8] Other Miscellaneous Operations
+
+
     [5] Remote Operations
     [6] Configure Git
 [*] Exit Application
@@ -161,10 +232,11 @@ def menu_when_a_git_repo(current_dir):
         if choice == 2:
             status()
 
-        elif choice == 3:
-            setup_ssh()
+        elif choice == 6:
+            push_code()
 
         elif choice == 8:
+            #Other Options
             configure_git()
 
 
