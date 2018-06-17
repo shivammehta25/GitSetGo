@@ -91,7 +91,7 @@ def pull_code():
     for remote in GitObject.remote.keys():
         print 'Remote Name: ' + bcolors.HEADER + remote + bcolors.OKBLUE + ' points to url : ' + GitObject.remote[
             remote]
-    remote = raw_input('[*]Press Q to cancel pull \nChoice of Remote (origin , upstream) : ')
+    remote = raw_input('[*]Press Q to cancel pull \nChoice of Remote (origin , upstream) : {0}'.format(bcolors.ENDC))
     try:
         if remote == 'q' or remote == 'Q':
             raise RuntimeError
@@ -121,7 +121,7 @@ def push_code():
     print '{0}[?] Select Remote From List of Remotes:'.format(bcolors.OKBLUE)
     for remote in GitObject.remote.keys():
         print remote + ' ---> ' + GitObject.remote[remote]
-    remote = raw_input('[*]Press Q to cancel Push \nChoice (origin, upstream) : ')
+    remote = raw_input('[*]Press Q to cancel Push \nChoice (origin, upstream) : {0}'.format(bcolors.ENDC))
     try:
         if remote == 'q' or remote == 'Q':
             raise RuntimeError
