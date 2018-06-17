@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import subprocess
 import os
 import sys
@@ -200,7 +202,7 @@ def populate_untracked_files(file_index, status):
 
 def populate_merge_conflicts(file_index):
     conflicted_files = \
-    subprocess.Popen(['git', 'diff', '--name-only', '--diff-filter=U'], stdout=subprocess.PIPE).communicate()[0]
+        subprocess.Popen(['git', 'diff', '--name-only', '--diff-filter=U'], stdout=subprocess.PIPE).communicate()[0]
     for file in conflicted_files:
         file_index += 1
         GitObject.conflicted_files[file_index] = file
@@ -323,6 +325,95 @@ def commit_code():
         print '{0}[-] Going back to menu {1}'.format(bcolors.FAIL, bcolors.ENDC)
 
 
+def remote_branches_for_remote(remote_name):
+    branches = subprocess.Popen(['git', 'ls-remote', '--heads', remote_name]).communicate()[0].split('\n')
+    branch_with_id = {}
+    id = 0
+    for branch in branches:
+        id += 1
+        branch_with_id[id] = branch
+
+    return branch_with_id
+
+
+def track_remote_branches():
+    try:
+        print '{0}[?] Which Remote You want to Track To ? '.format(bcolors.OKGREEN)
+        for remote in GitObject.remote:
+            print '{0} {1} {2}'.format(bcolors.HEADER, remote, bcolors.ENDC)
+
+        remote_name = raw_input('{0}[*] Enter Remote Name: {1}'.format(bcolors.HEADER, bcolors.ENDC))
+        if not GitObject.remote.has_key(remote_name):
+            raise AssertionError
+
+        branches = remote_branches_for_remote(remote_name)
+
+        for id in branches.keys():
+            print '{0}{1:<3d} | {2} {3}'.format(bcolors.HEADER, id, branches[id], bcolors.ENDC)
+
+        branch_id = input('{0}[?] Enter the Remote Branch ID to track{1}'.format(bcolors.OKBLUE, bcolors.ENDC))
+        assert branch_id
+        remote_branch_name = branches[branch_id].split('/')[2]
+        local_branch_name = raw_input('{0}[?] Enter The Local Branch Name{1}'.format(bcolors.OKBLUE, bcolors.ENDC))
+
+        print '{0}[*] Tracking local branch {1} to remote branch {2}{3} of remote {4}'.format(bcolors.BOLD, local_branch_name, remote_branch_name, remote_name, bcolors.ENDC)
+        remote_link = '{0}/{1}'.format(remote_name, remote_branch_name)
+        subprocess.check_call(['git', 'branch', local_branch_name, remote_link])
+        print '{0}[*] Branch {1} Successfully tracked to remote {2} {3}'.format(bcolors.OKGREEN, local_branch_name, remote_link, bcolors.ENDC)
+
+    except AssertionError:
+        print '{0}[-] Invalid Remote Back to Menu {1}'.format(bcolors.FAIL, bcolors.ENDC)
+    except SyntaxError:
+        print '{0}[-] Invalid Value For Remoted Branch ID {1}'.format(bcolors.FAIL, bcolors.ENDC)
+    except:
+        print '{0}[-] Fatal Error | Please Contact Developer {1}'.format(bcolors.FAIL, bcolors.ENDC)
+
+
+def show_all_branches_r():
+    print '{0}[*] List of All Branches including local and remote: {1}'.format(bcolors.HEADER, bcolors.ENDC)
+    subprocess.check_call(['git', 'branch', '-a'])
+
+
+def delete_a_branch():
+    try:
+        print '{0}[+] List of Local Branch {1}'.format(bcolors.OKBLUE, bcolors.ENDC)
+        branches_with_id = get_all_local_branch_with_ids()
+        print '{0}[?] Enter the ID of branch to delete {1}'.format(bcolors.OKBLUE, bcolors.ENDC)
+        branch_id = input('{0}[*] Branch Id:{1}'.format(bcolors.OKBLUE, bcolors.ENDC))
+        if not branches_with_id.has_key(branch_id):
+            raise AssertionError
+        branch_name = branches_with_id[branch_id]
+        choice = raw_input('{0}[*] Are you sure you want to delete branch {1} : (y/n) {2} '.format(bcolors.WARNING, branch_name, bcolors.ENDC))
+        if choice is 'N' or choice is 'n':
+            raise RuntimeError
+
+        subprocess.check_call(['git', 'branch', '-d', branch_name])
+
+    except AssertionError:
+        print '{0}[-] Invalid Remote ID Back to Menu {1}'.format(bcolors.FAIL, bcolors.ENDC)
+    except RuntimeError:
+        print '{0}[-] Cancelling Delete Back to Menu {1}'.format(bcolors.FAIL, bcolors.ENDC)
+    except subprocess.CalledProcessError:
+        print '{0}[-] Fatal Error Deleting a branch, Back to Menu {1}'.format(bcolors.FAIL, bcolors.ENDC)
+
+
+def get_all_local_branch_with_ids():
+    branches_with_id = {}
+    branches = subprocess.Popen(['git', 'branch'], stdout=subprocess.PIPE).communicate()[0].split('\n')
+    id = 0
+    start_color = bcolors.HEADER
+    for branch in branches:
+        if branch.startswith('*'):
+            branch = branch.replace('*', '').strip()
+            start_color = bcolors.WARNING
+        else:
+            branch = branch.strip()
+        id += 1
+        branches_with_id[id] = branch
+        print '{0} {1:<3d} | {2} {3}'.format(start_color, id, branch, bcolors.ENDC)
+    return branches_with_id
+
+
 def manage_branches():
     print bcolors.OKBLUE + '''
 [*] Options:
@@ -331,7 +422,7 @@ def manage_branches():
 [3] Show All Branches
 [9] Back To Main Menu
 
-[0] Choice:
+[*] Choice:
     ''' + bcolors.ENDC
     try:
         choice = input('{0}[?] Choice : {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
@@ -339,16 +430,36 @@ def manage_branches():
         if choice == 1:
             change_branch_from_branches()
 
+        elif choice == 2:
+            track_remote_branches()
+
+        elif choice == 3:
+            show_all_branches_r()
+
+        elif choice == 4:
+            delete_a_branch()
+
+        elif choice == 9:
+            raise RuntimeError
+
+        else:
+            raise AssertionError
+
+
+
     except AssertionError:
         print '{0}[-] Invalid Branch ID {1}'.format(bcolors.FAIL, bcolors.ENDC)
+    except RuntimeError:
+        pass
     except:
-        print '{0}[+] Fatal Error ! Please Retry {1}'.format(bcolors.FAIL, bcolors.ENDC)
+        print '{0}[-] Fatal Error| Maybe that was because of Invalid Input ! Please Retry {1}'.format(bcolors.FAIL,
+                                                                                                      bcolors.ENDC)
 
 
 def change_branch_from_branches():
     try:
         branches = list_branches()
-        choice = input('{0}Enter The Branch ID to switch: {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
+        choice = input('{0}[?] Enter The Branch ID to switch: {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
         if not branches.has_key(choice):
             raise AssertionError
         branch_name = branches[choice]
@@ -356,7 +467,6 @@ def change_branch_from_branches():
         print '{0}[+] Branch switched to {1} Successfully {2}'.format(bcolors.OKGREEN, branch_name, bcolors.ENDC)
     except AssertionError:
         print '{0}[-] Invalid Branch ID {1}'.format(bcolors.FAIL, bcolors.ENDC)
-
 
 
 def list_branches():
@@ -387,12 +497,14 @@ def menu_when_a_git_repo(current_dir):
 [1] Pull Code                                                       [5] Commit with Message
 [2] Status of Files                                                 [6] Push Code
 [3] Add Files To Stage                                              [7] Manage Branches
-[4] Remove Files From Stage                                         [8] Other Miscellaneous Operations
+[4] Remove Files From Stage                                         [8] Configure Git
+
+Options To Be Added Soon:
+[*] Remote Operations
+[*] Diff's And Patches
 
 
-    [5] Remote Operations
-    [6] Configure Git
-[9] Exit Application
+                                                                    [9] Exit Application
             ''' + bcolors.ENDC
     try:
         choice = input('{0}[?] Choice : {1}'.format(bcolors.OKBLUE, bcolors.ENDC))
