@@ -326,12 +326,13 @@ def commit_code():
 
 
 def remote_branches_for_remote(remote_name):
-    branches = subprocess.Popen(['git', 'ls-remote', '--heads', remote_name]).communicate()[0].split('\n')
+    branches = subprocess.Popen(['git', 'ls-remote', '--heads', remote_name] , stdout=subprocess.PIPE).communicate()[0].split('\n')
     branch_with_id = {}
     id = 0
     for branch in branches:
-        id += 1
-        branch_with_id[id] = branch
+        if branch:
+            id += 1
+            branch_with_id[id] = branch
 
     return branch_with_id
 
@@ -403,14 +404,15 @@ def get_all_local_branch_with_ids():
     id = 0
     start_color = bcolors.HEADER
     for branch in branches:
-        if branch.startswith('*'):
-            branch = branch.replace('*', '').strip()
-            start_color = bcolors.WARNING
-        else:
-            branch = branch.strip()
-        id += 1
-        branches_with_id[id] = branch
-        print '{0} {1:<3d} | {2} {3}'.format(start_color, id, branch, bcolors.ENDC)
+        if branch:
+            if branch.startswith('*'):
+                branch = branch.replace('*', '').strip()
+                start_color = bcolors.WARNING
+            else:
+                branch = branch.strip()
+            id += 1
+            branches_with_id[id] = branch
+            print '{0} {1:<3d} | {2} {3}'.format(start_color, id, branch, bcolors.ENDC)
     return branches_with_id
 
 
