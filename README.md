@@ -2,7 +2,7 @@
 Command Line Git Made Easy No Additional Dependencies Just Run the Script
 
 
-**Note:** *If it is not a valid Git Repository you will first have options to link create it one*
+**Note:** *If it is not a valid Git Repository you will first have options to create one and link it to github or any other service*
 ## Home:
 ![Home Screen](https://raw.githubusercontent.com/shivammehta007/GitSetGo/master/screenshots/main_page.png)
 
